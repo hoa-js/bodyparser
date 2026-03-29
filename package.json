@@ -1,6 +1,6 @@
 {
   "name": "@hoajs/bodyparser",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Body parser middleware for Hoa.",
   "main": "./dist/cjs/bodyparser.cjs",
   "type": "module",

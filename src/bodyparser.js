@@ -149,8 +149,8 @@ export function bodyParser (options = {}) {
     const method = ctx.req.method
     if (!methodShouldParse(method)) return next()
 
-    // Skip if body already parsed (not a ReadableStream)
-    if (ctx.req.body !== undefined && !(ctx.req.body instanceof ReadableStream)) return next()
+    // Skip if body already parsed (not a ReadableStream or IncomingMessage)
+    if (ctx.req.body !== undefined && !((ctx.req.body instanceof ReadableStream) || (typeof ctx.req.body.pipe === 'function'))) return next()
 
     const reqType = ctx.req.type
     let parseAs
