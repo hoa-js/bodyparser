@@ -215,6 +215,122 @@ describe('Body parser Middleware for Hoa', () => {
     })
   })
 
+  describe('Multipart Form Data', () => {
+    it('should parse multipart/form-data text fields', async () => {
+      const app = new Hoa()
+      app.use(bodyParser())
+      app.use(async (ctx) => { ctx.res.body = ctx.req.body })
+      const formData = new FormData()
+      formData.append('name', 'test')
+      formData.append('value', '123')
+      const res = await app.fetch(new Request('http://localhost/', {
+        method: 'POST',
+        body: formData
+      }))
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.name).toBe('test')
+      expect(body.value).toBe('123')
+    })
+
+    it('should parse multipart/form-data with file upload', async () => {
+      const app = new Hoa()
+      app.use(bodyParser())
+      app.use(async (ctx) => {
+        const file = ctx.req.body.file
+        ctx.res.body = { name: file.name, size: file.size }
+      })
+      const formData = new FormData()
+      formData.append('file', new File(['hello'], 'hello.txt', { type: 'text/plain' }))
+      const res = await app.fetch(new Request('http://localhost/', {
+        method: 'POST',
+        body: formData
+      }))
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.name).toBe('hello.txt')
+      expect(body.size).toBe(5)
+    })
+
+    it('should parse multipart/form-data with mixed text fields and file upload', async () => {
+      const app = new Hoa()
+      app.use(bodyParser())
+      app.use(async (ctx) => {
+        const { username, file } = ctx.req.body
+        ctx.res.body = { username, fileName: file.name, fileSize: file.size }
+      })
+      const formData = new FormData()
+      formData.append('username', 'alice')
+      formData.append('file', new File(['world'], 'world.txt', { type: 'text/plain' }))
+      const res = await app.fetch(new Request('http://localhost/', {
+        method: 'POST',
+        body: formData
+      }))
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.username).toBe('alice')
+      expect(body.fileName).toBe('world.txt')
+      expect(body.fileSize).toBe(5)
+    })
+
+    it('should parse multipart/form-data duplicate keys as array', async () => {
+      const app = new Hoa()
+      app.use(bodyParser())
+      app.use(async (ctx) => { ctx.res.body = ctx.req.body })
+      const formData = new FormData()
+      formData.append('tags', 'a')
+      formData.append('tags', 'b')
+      formData.append('tags', 'c')
+      const res = await app.fetch(new Request('http://localhost/', {
+        method: 'POST',
+        body: formData
+      }))
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.tags).toEqual(['a', 'b', 'c'])
+    })
+
+    it('should parse multipart/form-data with useClone: false', async () => {
+      const app = new Hoa()
+      app.use(bodyParser({ useClone: false }))
+      app.use(async (ctx) => { ctx.res.body = ctx.req.body })
+      const formData = new FormData()
+      formData.append('name', 'noclonemultipart')
+      const res = await app.fetch(new Request('http://localhost/', {
+        method: 'POST',
+        body: formData
+      }))
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.name).toBe('noclonemultipart')
+    })
+
+    it('should handle multipart formData() error with custom error handler', async () => {
+      let errorCaught = false
+      const app = new Hoa()
+      app.use(async (ctx, next) => {
+        try { await ctx.req.blob() } catch (_e) {}
+        await next()
+      })
+      app.use(bodyParser({
+        useClone: false,
+        onError: (_err, ctx) => {
+          errorCaught = true
+          ctx.res.status = 400
+          ctx.res.body = 'Multipart error'
+        }
+      }))
+      const formData = new FormData()
+      formData.append('name', 'test')
+      const res = await app.fetch(new Request('http://localhost/', {
+        method: 'POST',
+        body: formData
+      }))
+      expect(errorCaught).toBe(true)
+      expect(res.status).toBe(400)
+    })
+  })
+
   describe('Error Handling', () => {
     it('should handle invalid JSON with default error handler', async () => {
       const app = new Hoa()

@@ -7,7 +7,7 @@ const BASE_MIME = {
     'application/reports+json',
     'application/scim+json'
   ],
-  form: ['application/x-www-form-urlencoded'],
+  form: ['application/x-www-form-urlencoded', 'multipart/form-data'],
   text: ['text/plain']
 }
 
@@ -114,6 +114,23 @@ export function bodyParser (options = {}) {
     }
   }
 
+  async function parseMultipartFromRequest (request, ctx) {
+    let formData
+    try {
+      formData = await request.formData()
+    } catch (e) {
+      return throwOrHandle(ctx, e, 400)
+    }
+    const obj = Object.create(null)
+    for (const [key, value] of formData.entries()) {
+      const cur = obj[key]
+      if (cur === undefined) obj[key] = value
+      else if (Array.isArray(cur)) cur.push(value)
+      else obj[key] = [cur, value]
+    }
+    return obj
+  }
+
   async function parseFormFromBlob (blob, ctx) {
     const size = blob.size
     const limit = parseLimit(opts.formLimit)
@@ -158,6 +175,14 @@ export function bodyParser (options = {}) {
     else if (isEnabled('form') && matchTypes(reqType, 'form')) parseAs = 'form'
     else if (isEnabled('text') && matchTypes(reqType, 'text')) parseAs = 'text'
     if (!parseAs) return next()
+
+    // multipart/form-data must be parsed via formData() — blob+URLSearchParams won't work
+    if (parseAs === 'form' && reqType === 'multipart/form-data') {
+      const request = opts.useClone ? ctx.request.clone() : ctx.req
+      const parsed = await parseMultipartFromRequest(request, ctx)
+      if (parsed !== undefined) ctx.req.body = parsed
+      return next()
+    }
 
     // Read the body depending on useClone option
     let blob
