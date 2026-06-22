@@ -29,6 +29,76 @@ describe('Body parser Middleware for Hoa', () => {
       expect(await res.json()).toEqual({ tags: ['a', 'b', 'c'] })
     })
 
+    it('should parse form body with nested object keys (qs-esm)', async () => {
+      const app = new Hoa()
+      app.use(bodyParser())
+      app.use(async (ctx) => { ctx.res.body = ctx.req.body })
+      const res = await app.fetch(new Request('http://localhost/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'user[name]=alice&user[age]=20'
+      }))
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual({ user: { name: 'alice', age: '20' } })
+    })
+
+    it('should parse form body with deeply nested object keys (qs-esm)', async () => {
+      const app = new Hoa()
+      app.use(bodyParser())
+      app.use(async (ctx) => { ctx.res.body = ctx.req.body })
+      const res = await app.fetch(new Request('http://localhost/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'a[b][c]=value'
+      }))
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual({ a: { b: { c: 'value' } } })
+    })
+
+    it('should parse form body with explicit array brackets (qs-esm)', async () => {
+      const app = new Hoa()
+      app.use(bodyParser())
+      app.use(async (ctx) => { ctx.res.body = ctx.req.body })
+      const res = await app.fetch(new Request('http://localhost/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'tags[]=a&tags[]=b&tags[]=c'
+      }))
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual({ tags: ['a', 'b', 'c'] })
+    })
+
+    it('should parse form body with indexed array keys (qs-esm)', async () => {
+      const app = new Hoa()
+      app.use(bodyParser())
+      app.use(async (ctx) => { ctx.res.body = ctx.req.body })
+      const res = await app.fetch(new Request('http://localhost/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'list[0]=x&list[1]=y'
+      }))
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual({ list: ['x', 'y'] })
+    })
+
+    it('should parse form body with array of nested objects (qs-esm)', async () => {
+      const app = new Hoa()
+      app.use(bodyParser())
+      app.use(async (ctx) => { ctx.res.body = ctx.req.body })
+      const res = await app.fetch(new Request('http://localhost/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'items[0][name]=foo&items[0][qty]=1&items[1][name]=bar&items[1][qty]=2'
+      }))
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual({
+        items: [
+          { name: 'foo', qty: '1' },
+          { name: 'bar', qty: '2' }
+        ]
+      })
+    })
+
     it('should parse text body when enabled', async () => {
       const app = new Hoa()
       app.use(bodyParser({ enableTypes: ['text'] }))

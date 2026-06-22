@@ -1,3 +1,5 @@
+import { parse } from 'qs-esm'
+
 const BASE_MIME = {
   json: [
     'application/json',
@@ -136,15 +138,7 @@ export function bodyParser (options = {}) {
     const limit = parseLimit(opts.formLimit)
     if (size > limit) return throwOrHandle(ctx, new Error('Request body too large for form'), 413)
     const text = await blob.text()
-    const params = new URLSearchParams(text)
-    const obj = Object.create(null)
-    for (const [k, v] of params.entries()) {
-      const cur = obj[k]
-      if (cur === undefined) obj[k] = v
-      else if (Array.isArray(cur)) cur.push(v)
-      else obj[k] = [cur, v]
-    }
-    return obj
+    return parse(text)
   }
 
   async function parseTextFromBlob (blob, ctx) {

@@ -1,3 +1,7 @@
+## v0.2.0 / 2026-06-22
+
+- feat: use `qs-esm` to parse urlencoded form bodies, supporting nested objects and arrays
+
 ## v0.1.3 / 2026-03-29
 
 - fix: node compatibility
